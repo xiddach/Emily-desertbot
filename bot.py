@@ -1,4 +1,10 @@
 import os
+
+TOKEN = os.environ.get('TOKEN')
+if not TOKEN:
+    print("ERROR: TOKEN is missing or empty!")
+else:
+    print("TOKEN loaded successfully.")
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
