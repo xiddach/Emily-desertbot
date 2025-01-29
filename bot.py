@@ -1,4 +1,3 @@
-# Import necessary libraries
 import os
 import numpy as np
 import pandas as pd
@@ -7,7 +6,7 @@ from datetime import datetime, timedelta
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
 
-# List of dessert names
+# Список назв десертів
 DESSERTS = [
     "Макарон фісташка малина", "Макарон снікерс", "Макарон чізкейк нутела", "Макарон ягідний чізкейк",
     "Макарон груша горгонзола", "Макарон кокос мигдаль", "Макарон лотус", "Макарон гарбузове лате",
@@ -19,50 +18,50 @@ DESSERTS = [
     "Кіш з лососем"
 ]
 
-# File for storing historical data
+# Файл для зберігання історичних даних
 DATA_FILE = 'dessert_data.csv'
 
-# States for ConversationHandler
-DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT = range(7)
+# Стани для ConversationHandler
+DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, VIEW_DATE_SELECTION = range(8)
 
-# Load historical data
+# Завантаження історичних даних
 def load_data():
     try:
         data = pd.read_csv(DATA_FILE)
     except FileNotFoundError:
-        # If file does not exist, create a new DataFrame
+        # Якщо файл не існує, створюємо новий DataFrame
         data = pd.DataFrame(columns=['date'] + DESSERTS)
     return data
 
-# Save data to file
+# Збереження даних у файл
 def save_data(data):
     data.to_csv(DATA_FILE, index=False)
 
-# Predict orders using Random Forest
+# Прогнозування замовлень за допомогою Random Forest
 def predict_orders(dessert_name, data):
     """
-    Predict dessert orders using Random Forest.
-    :param dessert_name: name of the dessert
-    :param data: DataFrame with historical data
-    :return: predicted order for the next day
+    Прогнозування замовлень десертів за допомогою Random Forest.
+    :param dessert_name: назва десерту
+    :param data: DataFrame з історичними даними
+    :return: прогнозоване замовлення на наступний день
     """
-    # Select data only for a specific dessert
+    # Вибираємо дані лише для конкретного десерту
     dessert_data = data[['date', dessert_name]].dropna()
     if len(dessert_data) < 5:
-        raise ValueError(f"Not enough data for prediction {dessert_name}.")
-    # Take the last 5 days
+        raise ValueError(f"Недостатньо даних для прогнозування {dessert_name}.")
+    # Беремо останні 5 днів
     last_5_days = dessert_data.tail(5)
     X = np.array(range(len(last_5_days))).reshape(-1, 1)
     y = np.array(last_5_days[dessert_name])
-    # Train Random Forest model
+    # Навчаємо модель Random Forest
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
-    # Predict the order for the next day
+    # Прогнозуємо замовлення на наступний день
     next_day = X[-1][0] + 1
     predicted_order = model.predict([[next_day]])[0]
     return round(predicted_order)
 
-# Handle /start command
+# Обробник команди /start
 def start(update: Update, context: CallbackContext) -> int:
     keyboard = [
         ["Ввести дані минулих днів"],
@@ -78,7 +77,7 @@ def start(update: Update, context: CallbackContext) -> int:
     )
     return VIEW_DATA
 
-# Handle action selection
+# Обробник вибору дії
 def handle_action(update: Update, context: CallbackContext) -> int:
     action = update.message.text
     if action == "Ввести дані минулих днів":
@@ -96,7 +95,7 @@ def handle_action(update: Update, context: CallbackContext) -> int:
         update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
         return VIEW_DATA
 
-# View historical data
+# Перегляд даних минулих днів
 def view_data(update: Update, context: CallbackContext) -> int:
     data = load_data()
     if data.empty:
@@ -110,7 +109,7 @@ def view_data(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("Оберіть дату для перегляду:", reply_markup=reply_markup)
     return VIEW_DATE_SELECTION
 
-# Date selection for viewing data
+# Дата вибору для перегляду даних
 def view_date_selection(update: Update, context: CallbackContext) -> int:
     selected_date = update.message.text
     data = load_data()
@@ -125,7 +124,7 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Дані за {selected_date} не знайдені.")
     return view_data(update, context)
 
-# Edit desserts menu
+# Меню редагування списку десертів
 def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
     keyboard = [
         ["Додати десерт"],
@@ -139,7 +138,7 @@ def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
     )
     return EDIT_DATA
 
-# Add new dessert
+# Додавання нового десерту
 def add_dessert(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
         "Введіть назву нового десерту:",
@@ -147,7 +146,7 @@ def add_dessert(update: Update, context: CallbackContext) -> int:
     )
     return ADD_DESSERT
 
-# Handle adding new dessert
+# Обробник додавання нового десерту
 def handle_add_dessert(update: Update, context: CallbackContext) -> int:
     new_dessert = update.message.text.strip()
     if new_dessert in DESSERTS:
@@ -157,7 +156,7 @@ def handle_add_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
     return edit_desserts_menu(update, context)
 
-# Remove dessert
+# Видалення десерту
 def remove_dessert(update: Update, context: CallbackContext) -> int:
     keyboard = [[dessert] for dessert in DESSERTS]
     keyboard.append(["Назад до головного меню"])
@@ -168,7 +167,7 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
     )
     return REMOVE_DESSERT
 
-# Handle removing dessert
+# Обробник видалення десерту
 def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     dessert_to_remove = update.message.text.strip()
     if dessert_to_remove in DESSERTS:
@@ -178,13 +177,13 @@ def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
     return edit_desserts_menu(update, context)
 
-# Start prediction
+# Початок прогнозування
 def start_prediction(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("Починаємо прогнозування...")
-    # Here you can add logic for prediction
+    # Тут можна додати логіку прогнозування
     return VIEW_DATA
 
-# Handle date input
+# Обробник дати
 def get_date(update: Update, context: CallbackContext) -> int:
     try:
         input_date = update.message.text
@@ -197,7 +196,7 @@ def get_date(update: Update, context: CallbackContext) -> int:
         update.message.reply_text('Неправильний формат дати. Будь ласка, введіть дату у форматі ДД ММ РРРР:')
         return DATE
 
-# Ask for leftovers for each dessert
+# Запит залишків для кожного десерту
 def ask_next_dessert(update: Update, context: CallbackContext) -> int:
     desserts = context.user_data.get('desserts', {})
     remaining_desserts = [dessert for dessert in DESSERTS if dessert not in desserts]
@@ -209,7 +208,7 @@ def ask_next_dessert(update: Update, context: CallbackContext) -> int:
     else:
         return finalize_data(update, context)
 
-# Handle input of leftovers
+# Обробник введення залишків
 def handle_dessert_input(update: Update, context: CallbackContext) -> int:
     try:
         amount = int(update.message.text)
@@ -220,18 +219,18 @@ def handle_dessert_input(update: Update, context: CallbackContext) -> int:
         update.message.reply_text('Будь ласка, введіть число:')
         return DESSERTS_INPUT
 
-# Save data and make predictions
+# Збереження даних і прогнозування
 def finalize_data(update: Update, context: CallbackContext) -> int:
     date = context.user_data['date']
     desserts = context.user_data['desserts']
-    # Load existing data
+    # Завантажуємо існуючі дані
     data = load_data()
-    # Add new data
+    # Додаємо нові дані
     new_row = {'date': date}
     new_row.update(desserts)
     data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
     save_data(data)
-    # Predict orders
+    # Прогнозуємо замовлення
     predictions = {}
     for dessert in DESSERTS:
         try:
@@ -239,16 +238,16 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
             predictions[dessert] = prediction
         except ValueError:
             predictions[dessert] = 'Недостатньо даних'
-    # Calculate the prediction date
+    # Розраховуємо дату прогнозу
     next_date = datetime.strptime(date, '%d %B %Y').date() + timedelta(days=1)
-    # Formulate the message with predictions
+    # Формуємо повідомлення з прогнозами
     response = f'Прогнозовані замовлення на {next_date.strftime("%d %B %Y")}:\n'
     for dessert, prediction in predictions.items():
         response += f'{dessert}: {prediction}\n'
     update.message.reply_text(response)
     return ConversationHandler.END
 
-# Handle cancel command
+# Обробник команди /cancel
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
@@ -266,7 +265,7 @@ def handle_edit_data(update: Update, context: CallbackContext) -> int:
         update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
         return EDIT_DATA
 
-# Main function
+# Головна функція
 def main():
     TOKEN = os.environ.get('TOKEN')
     if not TOKEN:
@@ -284,7 +283,7 @@ def main():
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
             PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
-            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],  # Use handle_edit_data
+            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],
             ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
             REMOVE_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_remove_dessert)],
             VIEW_DATE_SELECTION: [MessageHandler(Filters.text & ~Filters.command, view_date_selection)],
