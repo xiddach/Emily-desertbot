@@ -1,41 +1,9 @@
-
 import os
-from telegram.ext import Updater
-
-def main():
-    # Отримуємо токен з змінних середовища
-    TOKEN = os.environ.get('TOKEN')
-    
-    # Перевіряємо, чи токен існує
-    if not TOKEN:
-        print("ERROR: Environment variable 'TOKEN' is missing or empty!")
-        exit(1)  # Завершуємо програму з кодом помилки
-    
-    print("TOKEN loaded successfully.")
-    
-    # Ініціалізуємо бота
-    try:
-        updater = Updater(TOKEN)
-        print("Bot initialized successfully.")
-    except Exception as e:
-        print(f"ERROR: Failed to initialize bot. Details: {e}")
-        exit(1)  # Завершуємо програму з кодом помилки
-    
-    # Додайте решту вашого коду (наприклад, обробники команд)
-    # ...
-
-if __name__ == "__main__":
-    main()
-TOKEN = os.environ.get('TOKEN')
-if not TOKEN:
-    print("ERROR: TOKEN is missing or empty!")
-else:
-    print("TOKEN loaded successfully.")
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
 
 # Список назв десертів
@@ -54,7 +22,7 @@ DESSERTS = [
 DATA_FILE = 'dessert_data.csv'
 
 # Стани для ConversationHandler
-DATE, DESSERTS_INPUT, PREDICT = range(3)
+DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT = range(7)
 
 # Завантаження історичних даних
 def load_data():
@@ -102,9 +70,119 @@ def predict_orders(dessert_name, data):
 
 # Обробник команди /start
 def start(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text('Привіт! Я бот для прогнозування замовлень десертів.\n'
-                              'Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: YYYY-MM-DD):')
-    return DATE
+    # Створюємо кнопки
+    keyboard = [
+        ["Ввести дані минулих днів"],
+        ["Переглянути дані минулих днів"],
+        ["Редагувати список десертів"],
+        ["Почати прогнозування"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+    
+    update.message.reply_text(
+        "Привіт! Що ви хочете зробити?",
+        reply_markup=reply_markup
+    )
+    return VIEW_DATA
+
+# Обробник вибору дії
+def handle_action(update: Update, context: CallbackContext) -> int:
+    action = update.message.text
+    
+    if action == "Ввести дані минулих днів":
+        update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: YYYY-MM-DD):')
+        return DATE
+    elif action == "Переглянути дані минулих днів":
+        return view_data(update, context)
+    elif action == "Редагувати список десертів":
+        return edit_desserts_menu(update, context)
+    elif action == "Почати прогнозування":
+        return start_prediction(update, context)
+    else:
+        update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
+        return VIEW_DATA
+
+# Перегляд даних минулих днів
+def view_data(update: Update, context: CallbackContext) -> int:
+    data = load_data()
+    if data.empty:
+        update.message.reply_text("Історичні дані відсутні.")
+        return VIEW_DATA
+    
+    response = "Історичні дані:\n"
+    for _, row in data.iterrows():
+        response += f"{row['date']}:\n"
+        for dessert in DESSERTS:
+            if dessert in row and not pd.isna(row[dessert]):
+                response += f"  {dessert}: {row[dessert]}\n"
+    
+    update.message.reply_text(response)
+    return VIEW_DATA
+
+# Меню редагування списку десертів
+def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
+    keyboard = [
+        ["Додати десерт"],
+        ["Видалити десерт"],
+        ["Назад"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+    
+    update.message.reply_text(
+        "Оберіть дію для редагування списку десертів:",
+        reply_markup=reply_markup
+    )
+    return EDIT_DATA
+
+# Додавання нового десерту
+def add_dessert(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text(
+        "Введіть назву нового десерту:",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ADD_DESSERT
+
+# Обробник додавання нового десерту
+def handle_add_dessert(update: Update, context: CallbackContext) -> int:
+    new_dessert = update.message.text.strip()
+    
+    if new_dessert in DESSERTS:
+        update.message.reply_text(f"Десерт '{new_dessert}' вже існує.")
+    else:
+        DESSERTS.append(new_dessert)
+        update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
+    
+    return edit_desserts_menu(update, context)
+
+# Видалення десерту
+def remove_dessert(update: Update, context: CallbackContext) -> int:
+    keyboard = [[dessert] for dessert in DESSERTS]
+    keyboard.append(["Назад"])
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+    
+    update.message.reply_text(
+        "Оберіть десерт для видалення:",
+        reply_markup=reply_markup
+    )
+    return REMOVE_DESSERT
+
+# Обробник видалення десерту
+def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
+    dessert_to_remove = update.message.text.strip()
+    
+    if dessert_to_remove in DESSERTS:
+        DESSERTS.remove(dessert_to_remove)
+        update.message.reply_text(f"Десерт '{dessert_to_remove}' успішно видалено.")
+    else:
+        update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
+    
+    return edit_desserts_menu(update, context)
+
+# Початок прогнозування
+def start_prediction(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text("Починаємо прогнозування...")
+    # Тут можна додати логіку прогнозування
+    return VIEW_DATA
 
 # Обробник дати
 def get_date(update: Update, context: CallbackContext) -> int:
@@ -156,7 +234,7 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
     # Додаємо нові дані
     new_row = {'date': date}
     new_row.update(desserts)
-    data = data.append(new_row, ignore_index=True)
+    data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
     save_data(data)
     
     # Прогнозуємо замовлення
@@ -185,32 +263,44 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
 
-def main() -> None:
-    # Токен вашого Telegram-бота
+# Головна функція
+def main():
+    # Отримуємо токен з змінних середовища
     TOKEN = os.environ.get('TOKEN')
+    
+    if not TOKEN:
+        print("ERROR: Environment variable 'TOKEN' is missing or empty!")
+        exit(1)
+    
+    print("TOKEN loaded successfully.")
     
     # Створюємо Updater і передаємо йому токен бота
     updater = Updater(TOKEN)
-
+    
     # Отримуємо диспетчер для реєстрації обробників
     dispatcher = updater.dispatcher
-
+    
     # Налаштовуємо ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
+            VIEW_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_action)],
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
             PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
+            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],
+            ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
+            REMOVE_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_remove_dessert)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
-
+    
     dispatcher.add_handler(conv_handler)
-
+    
     # Запускаємо бота
     updater.start_polling()
-
+    print("Bot started polling.")
+    
     # Робимо бота активним до моменту зупинки
     updater.idle()
 
