@@ -52,6 +52,11 @@ def predict_orders(dessert_name, data):
     predicted_order = model.predict([[next_day]])[0]
     return round(predicted_order)
 
+# Генерація inline-клавіатури
+def create_inline_keyboard(options):
+    keyboard = [[InlineKeyboardButton(option, callback_data=option)] for option in options]
+    return InlineKeyboardMarkup(keyboard)
+
 # Обробник команди /start
 def start(update: Update, context: CallbackContext) -> int:
     keyboard = [
@@ -70,11 +75,6 @@ def start(update: Update, context: CallbackContext) -> int:
         reply_markup=reply_markup
     )
     return VIEW_DATA
-
-# Генерація inline-клавіатури
-def create_inline_keyboard(options):
-    keyboard = [[InlineKeyboardButton(option, callback_data=option)] for option in options]
-    return InlineKeyboardMarkup(keyboard)
 
 # Обробник callback-запитів
 def handle_callback_query(update: Update, context: CallbackContext) -> None:
@@ -268,8 +268,7 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            VIEW_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_action),
-                        CallbackQueryHandler(handle_callback_query)],
+            VIEW_DATA: [CallbackQueryHandler(handle_callback_query), MessageHandler(Filters.text & ~Filters.command, handle_action)],
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
             PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
