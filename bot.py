@@ -75,24 +75,38 @@ def start(update: Update, context: CallbackContext) -> int:
         "Привіт! Що ви хочете зробити?",
         reply_markup=reply_markup
     )
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return VIEW_DATA
 
 # Обробник вибору дії
 def handle_action(update: Update, context: CallbackContext) -> int:
     action = update.message.text
     if action == "Ввести дані минулих днів":
-        update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: ДД ММ РРРР):')
+        update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: ДД.ММ.РРРР):')
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return DATE
     elif action == "Переглянути дані минулих днів":
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return view_data(update, context)
     elif action == "Редагувати список десертів":
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return edit_desserts_menu(update, context)
     elif action == "Почати прогнозування":
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return start_prediction(update, context)
     elif action == "Назад до головного меню":
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return start(update, context)
     else:
         update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return VIEW_DATA
 
 # Перегляд даних минулих днів
@@ -100,13 +114,17 @@ def view_data(update: Update, context: CallbackContext) -> int:
     data = load_data()
     if data.empty:
         update.message.reply_text("Історичні дані відсутні.")
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return VIEW_DATA
     
-    dates = sorted(data['date'].unique(), key=lambda x: datetime.strptime(x, '%d %B %Y'))
+    dates = sorted(data['date'].unique(), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
     keyboard = [[date] for date in dates]
     keyboard.append(["Назад до головного меню"])
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
     update.message.reply_text("Оберіть дату для перегляду:", reply_markup=reply_markup)
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return VIEW_DATE_SELECTION
 
 # Дата вибору для перегляду даних
@@ -122,6 +140,8 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(response)
     else:
         update.message.reply_text(f"Дані за {selected_date} не знайдені.")
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return view_data(update, context)
 
 # Меню редагування списку десертів
@@ -136,6 +156,8 @@ def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
         "Оберіть дію для редагування списку десертів:",
         reply_markup=reply_markup
     )
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return EDIT_DATA
 
 # Додавання нового десерту
@@ -144,6 +166,8 @@ def add_dessert(update: Update, context: CallbackContext) -> int:
         "Введіть назву нового десерту:",
         reply_markup=ReplyKeyboardRemove()
     )
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return ADD_DESSERT
 
 # Обробник додавання нового десерту
@@ -154,6 +178,8 @@ def handle_add_dessert(update: Update, context: CallbackContext) -> int:
     else:
         DESSERTS.append(new_dessert)
         update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return edit_desserts_menu(update, context)
 
 # Видалення десерту
@@ -165,6 +191,8 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
         "Оберіть десерт для видалення:",
         reply_markup=reply_markup
     )
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return REMOVE_DESSERT
 
 # Обробник видалення десерту
@@ -175,25 +203,33 @@ def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' успішно видалено.")
     else:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return edit_desserts_menu(update, context)
 
 # Початок прогнозування
 def start_prediction(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("Починаємо прогнозування...")
     # Тут можна додати логіку прогнозування
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return VIEW_DATA
 
 # Обробник дати
 def get_date(update: Update, context: CallbackContext) -> int:
     try:
         input_date = update.message.text
-        date = datetime.strptime(input_date, '%d %B %Y').date()
-        context.user_data['date'] = date.strftime('%d %B %Y')  # Save in the required format
+        date = datetime.strptime(input_date, '%d.%m.%Y').date()
+        context.user_data['date'] = date.strftime('%d.%m.%Y')  # Save in the required format
         context.user_data['desserts'] = {}
         update.message.reply_text(f'Дякую! Тепер давайте введемо залишки для кожного десерту.')
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return ask_next_dessert(update, context)
     except ValueError:
-        update.message.reply_text('Неправильний формат дати. Будь ласка, введіть дату у форматі ДД ММ РРРР:')
+        update.message.reply_text('Неправильний формат дати. Будь ласка, введіть дату у форматі ДД.ММ.РРРР:')
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return DATE
 
 # Запит залишків для кожного десерту
@@ -204,6 +240,8 @@ def ask_next_dessert(update: Update, context: CallbackContext) -> int:
         dessert = remaining_desserts[0]
         context.user_data['current_dessert'] = dessert
         update.message.reply_text(f'Скільки залишилось {dessert}? (введіть число):')
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return DESSERTS_INPUT
     else:
         return finalize_data(update, context)
@@ -214,14 +252,18 @@ def handle_dessert_input(update: Update, context: CallbackContext) -> int:
         amount = int(update.message.text)
         current_dessert = context.user_data['current_dessert']
         context.user_data['desserts'][current_dessert] = amount
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return ask_next_dessert(update, context)
     except ValueError:
         update.message.reply_text('Будь ласка, введіть число:')
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return DESSERTS_INPUT
 
 # Збереження даних і прогнозування
 def finalize_data(update: Update, context: CallbackContext) -> int:
-    date = context.user_data['date']
+    date = datetime.strptime(context.user_data['date'], '%d.%m.%Y').date()
     desserts = context.user_data['desserts']
     # Завантажуємо існуючі дані
     data = load_data()
@@ -239,17 +281,21 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
         except ValueError:
             predictions[dessert] = 'Недостатньо даних'
     # Розраховуємо дату прогнозу
-    next_date = datetime.strptime(date, '%d %B %Y').date() + timedelta(days=1)
+    next_date = date + timedelta(days=1)
     # Формуємо повідомлення з прогнозами
-    response = f'Прогнозовані замовлення на {next_date.strftime("%d %B %Y")}:\n'
+    response = f'Прогнозовані замовлення на {next_date.strftime("%d.%m.%Y")}:\n'
     for dessert, prediction in predictions.items():
         response += f'{dessert}: {prediction}\n'
     update.message.reply_text(response)
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return ConversationHandler.END
 
 # Обробник команди /cancel
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
+    # Delete the previous message
+    context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
     return ConversationHandler.END
 
 # Handle actions in the edit desserts menu
@@ -263,6 +309,8 @@ def handle_edit_data(update: Update, context: CallbackContext) -> int:
         return start(update, context)
     else:
         update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
+        # Delete the previous message
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return EDIT_DATA
 
 # Головна функція
