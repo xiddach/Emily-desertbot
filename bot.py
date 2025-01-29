@@ -41,7 +41,6 @@ def save_data(data):
 def predict_orders(dessert_name, data):
     """
     Прогнозування замовлень десертів за допомогою Random Forest.
-    
     :param dessert_name: назва десерту
     :param data: DataFrame з історичними даними
     :return: прогнозоване замовлення на наступний день
@@ -263,6 +262,20 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
 
+# Обробник дій у меню редагування списку десертів
+def handle_edit_data(update: Update, context: CallbackContext) -> int:
+    action = update.message.text.strip()
+    
+    if action == "Додати десерт":
+        return add_dessert(update, context)
+    elif action == "Видалити десерт":
+        return remove_dessert(update, context)
+    elif action == "Назад":
+        return start(update, context)
+    else:
+        update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
+        return EDIT_DATA
+
 # Головна функція
 def main():
     # Отримуємо токен з змінних середовища
@@ -288,7 +301,7 @@ def main():
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
             PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
-            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],
+            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],  # Використовуємо handle_edit_data
             ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
             REMOVE_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_remove_dessert)],
         },
