@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
@@ -36,27 +37,45 @@ def load_data():
 def save_data(data):
     data.to_csv(DATA_FILE, index=False)
 
+# Прогнозування замовлень за допомогою Random Forest
+def predict_orders(dessert_name, data):
+    """
+    Прогнозування замовлень десертів за допомогою Random Forest.
+    :param dessert_name: назва десерту
+    :param data: DataFrame з історичними даними
+    :return: прогнозоване замовлення на наступний день
+    """
+    # Вибираємо дані лише для конкретного десерту
+    dessert_data = data[['date', dessert_name]].dropna()
+    if len(dessert_data) < 5:
+        raise ValueError(f"Недостатньо даних для прогнозування {dessert_name}.")
+    # Беремо останні 5 днів
+    last_5_days = dessert_data.tail(5)
+    X = np.array(range(len(last_5_days))).reshape(-1, 1)
+    y = np.array(last_5_days[dessert_name])
+    # Навчаємо модель Random Forest
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    # Прогнозуємо замовлення на наступний день
+    next_day = X[-1][0] + 1
+    predicted_order = model.predict([[next_day]])[0]
+    return round(predicted_order)
+
 # Обробник команди /start
 def start(update: Update, context: CallbackContext) -> int:
-    # Створюємо кнопки
     keyboard = [
         ["Ввести дані минулих днів"],
         ["Переглянути залишки за датами"],
         ["Редагувати список десертів"],
-        ["Почати розрахунок замовлення"]
+        ["Почати прогнозування"]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-    
-    update.message.reply_text(
-        "Привіт! Що ви хочете зробити?",
-        reply_markup=reply_markup
-    )
+    update.message.reply_text("Привіт! Що ви хочете зробити?", reply_markup=reply_markup)
     return VIEW_DATA
 
 # Обробник вибору дії
 def handle_action(update: Update, context: CallbackContext) -> int:
-    action = update.message.text
-    
+    action = update.message.text.strip()
     if action == "Ввести дані минулих днів":
         update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: DD-MM-YYYY):')
         return DATE
@@ -64,8 +83,8 @@ def handle_action(update: Update, context: CallbackContext) -> int:
         return view_dates(update, context)
     elif action == "Редагувати список десертів":
         return edit_desserts_menu(update, context)
-    elif action == "Почати розрахунок замовлення":
-        return start_order_calculation(update, context)
+    elif action == "Почати прогнозування":
+        return start_prediction(update, context)
     else:
         update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
         return VIEW_DATA
@@ -117,31 +136,22 @@ def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
         ["Повернутися в головне меню"]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-    
-    update.message.reply_text(
-        "Оберіть дію для редагування списку десертів:",
-        reply_markup=reply_markup
-    )
+    update.message.reply_text("Оберіть дію для редагування списку десертів:", reply_markup=reply_markup)
     return EDIT_DATA
 
 # Додавання нового десерту
 def add_dessert(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text(
-        "Введіть назву нового десерту:",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    update.message.reply_text("Введіть назву нового десерту:", reply_markup=ReplyKeyboardRemove())
     return ADD_DESSERT
 
 # Обробник додавання нового десерту
 def handle_add_dessert(update: Update, context: CallbackContext) -> int:
     new_dessert = update.message.text.strip()
-    
     if new_dessert in DESSERTS:
         update.message.reply_text(f"Десерт '{new_dessert}' вже існує.")
     else:
         DESSERTS.append(new_dessert)
         update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
-    
     return edit_desserts_menu(update, context)
 
 # Видалення десерту
@@ -149,73 +159,24 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
     keyboard = [[dessert] for dessert in DESSERTS]
     keyboard.append(["Повернутися в головне меню"])
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-    
-    update.message.reply_text(
-        "Оберіть десерт для видалення:",
-        reply_markup=reply_markup
-    )
+    update.message.reply_text("Оберіть десерт для видалення:", reply_markup=reply_markup)
     return REMOVE_DESSERT
 
 # Обробник видалення десерту
 def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     dessert_to_remove = update.message.text.strip()
-    
     if dessert_to_remove == "Повернутися в головне меню":
         return start(update, context)
-    
     if dessert_to_remove in DESSERTS:
         DESSERTS.remove(dessert_to_remove)
         update.message.reply_text(f"Десерт '{dessert_to_remove}' успішно видалено.")
     else:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
-    
     return edit_desserts_menu(update, context)
 
-# Початок розрахунку замовлення
-def start_order_calculation(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text("Починаємо розрахунок замовлення...")
-    return calculate_order(update, context)
-
-# Розрахунок замовлення
-def calculate_order(update: Update, context: CallbackContext) -> int:
-    data = load_data()
-    if data.empty:
-        update.message.reply_text("Недостатньо даних для розрахунку замовлення.")
-        return VIEW_DATA
-    
-    # Беремо останні 5 днів для прогнозування
-    last_5_days = data.tail(5)
-    predictions = {}
-    
-    for dessert in DESSERTS:
-        try:
-            dessert_data = last_5_days[['date', dessert]].dropna()
-            if len(dessert_data) < 5:
-                predictions[dessert] = "Недостатньо даних"
-                continue
-            
-            X = np.array(range(len(dessert_data))).reshape(-1, 1)
-            y = np.array(dessert_data[dessert])
-            
-            model = RandomForestRegressor(n_estimators=100, random_state=42)
-            model.fit(X, y)
-            
-            next_day = X[-1][0] + 1
-            predicted_order = round(model.predict([[next_day]])[0])
-            
-            # Отримуємо залишок за останній день
-            last_remainder = last_5_days.iloc[-1][dessert]
-            order_amount = max(predicted_order - last_remainder, 0)
-            predictions[dessert] = order_amount
-        except Exception:
-            predictions[dessert] = "Помилка розрахунку"
-    
-    # Формуємо повідомлення з результатами
-    response = "Розрахунок замовлення на завтра:\n"
-    for dessert, amount in predictions.items():
-        response += f"{dessert}: {amount}\n"
-    
-    update.message.reply_text(response)
+# Початок прогнозування
+def start_prediction(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text("Починаємо прогнозування...")
     return VIEW_DATA
 
 # Обробник дати
@@ -225,7 +186,6 @@ def get_date(update: Update, context: CallbackContext) -> int:
         date = datetime.strptime(input_date, '%d-%m-%Y').date()
         context.user_data['date'] = date
         context.user_data['desserts'] = {}
-        
         update.message.reply_text(f'Дякую! Тепер давайте введемо залишки для кожного десерту.')
         return ask_next_dessert(update, context)
     except ValueError:
@@ -277,20 +237,15 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
 # Головна функція
 def main():
-    # Отримуємо токен з змінних середовища
     TOKEN = os.environ.get('TOKEN')
     if not TOKEN:
         print("ERROR: Environment variable 'TOKEN' is missing or empty!")
         exit(1)
     print("TOKEN loaded successfully.")
     
-    # Створюємо Updater і передаємо йому токен бота
     updater = Updater(TOKEN)
-    
-    # Отримуємо диспетчер для реєстрації обробників
     dispatcher = updater.dispatcher
     
-    # Налаштовуємо ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -306,12 +261,8 @@ def main():
     )
     
     dispatcher.add_handler(conv_handler)
-    
-    # Запускаємо бота
     updater.start_polling()
     print("Bot started polling.")
-    
-    # Робимо бота активним до моменту зупинки
     updater.idle()
 
 if __name__ == '__main__':
