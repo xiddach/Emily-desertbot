@@ -47,15 +47,19 @@ def predict_orders(dessert_name, data):
     """
     # Вибираємо дані лише для конкретного десерту
     dessert_data = data[['date', dessert_name]].dropna()
-    if len(dessert_data) < 5:
+    if len(dessert_data) < 2:
         raise ValueError(f"Недостатньо даних для прогнозування {dessert_name}.")
-    # Беремо останні 5 днів
-    last_5_days = dessert_data.tail(5)
-    X = np.array(range(len(last_5_days))).reshape(-1, 1)
-    y = np.array(last_5_days[dessert_name])
+    
+    # Беремо останні 14 днів або менше, якщо немає 14 днів
+    last_days = min(14, len(dessert_data))
+    last_n_days = dessert_data.tail(last_days)
+    X = np.array(range(len(last_n_days))).reshape(-1, 1)
+    y = np.array(last_n_days[dessert_name])
+    
     # Навчаємо модель Random Forest
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
+    
     # Прогнозуємо замовлення на наступний день
     next_day = X[-1][0] + 1
     predicted_order = model.predict([[next_day]])[0]
@@ -117,7 +121,6 @@ def view_data(update: Update, context: CallbackContext) -> int:
         # Delete the previous message
         context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return VIEW_DATA
-    
     dates = sorted(data['date'].unique(), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
     keyboard = [[date] for date in dates]
     keyboard.append(["Назад до головного меню"])
@@ -133,7 +136,7 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
     data = load_data()
     row = data[data['date'] == selected_date]
     if not row.empty:
-        response = f"Дані за {selected_date}:\n"
+        response = f"Дані за {selected_date} ({datetime.strptime(selected_date, '%d.%m.%Y').strftime('%A')}):\n"
         for dessert in DESSERTS:
             if dessert in row and not pd.isna(row[dessert].values[0]):
                 response += f"  {dessert}: {row[dessert].values[0]}\n"
@@ -282,8 +285,10 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
             predictions[dessert] = 'Недостатньо даних'
     # Розраховуємо дату прогнозу
     next_date = date + timedelta(days=1)
+    # Отримуємо назву дня тижня
+    day_of_week = next_date.strftime('%A')
     # Формуємо повідомлення з прогнозами
-    response = f'Прогнозовані замовлення на {next_date.strftime("%d.%m.%Y")}:\n'
+    response = f'Прогнозовані замовлення на {day_of_week}, {next_date.strftime("%d.%m.%Y")}:\n'
     for dessert, prediction in predictions.items():
         response += f'{dessert}: {prediction}\n'
     update.message.reply_text(response)
@@ -320,10 +325,8 @@ def main():
         print("ERROR: Environment variable 'TOKEN' is missing or empty!")
         exit(1)
     print("TOKEN loaded successfully.")
-    
     updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
-    
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -338,7 +341,6 @@ def main():
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
-    
     dispatcher.add_handler(conv_handler)
     updater.start_polling()
     print("Bot started polling.")
