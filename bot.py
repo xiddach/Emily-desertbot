@@ -22,7 +22,7 @@ DESSERTS = [
 DATA_FILE = 'dessert_data.csv'
 
 # Стани для ConversationHandler
-DATE, DESSERTS_INPUT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, SELECT_DATE = range(7)
+DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, SELECT_DATE = range(8)
 
 # Завантаження історичних даних
 def load_data():
@@ -252,6 +252,7 @@ def main():
             VIEW_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_action)],
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
+            PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
             EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data)],
             ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
             REMOVE_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_remove_dessert)],
