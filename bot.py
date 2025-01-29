@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -154,7 +155,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
 def main() -> None:
     # Токен вашого Telegram-бота
-    TOKEN = 7631205077:AAFt7ryCShzyBA43ou-7IldEWGsAO0TyB9E
+    TOKEN = os.environ.get(7631205077:AAFt7ryCShzyBA43ou-7IldEWGsAO0TyB9E)
     
     # Створюємо Updater і передаємо йому токен бота
     updater = Updater(TOKEN)
