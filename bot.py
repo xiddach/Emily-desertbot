@@ -1,5 +1,31 @@
-import os
 
+import os
+from telegram.ext import Updater
+
+def main():
+    # Отримуємо токен з змінних середовища
+    TOKEN = os.environ.get('TOKEN')
+    
+    # Перевіряємо, чи токен існує
+    if not TOKEN:
+        print("ERROR: Environment variable 'TOKEN' is missing or empty!")
+        exit(1)  # Завершуємо програму з кодом помилки
+    
+    print("TOKEN loaded successfully.")
+    
+    # Ініціалізуємо бота
+    try:
+        updater = Updater(TOKEN)
+        print("Bot initialized successfully.")
+    except Exception as e:
+        print(f"ERROR: Failed to initialize bot. Details: {e}")
+        exit(1)  # Завершуємо програму з кодом помилки
+    
+    # Додайте решту вашого коду (наприклад, обробники команд)
+    # ...
+
+if __name__ == "__main__":
+    main()
 TOKEN = os.environ.get('TOKEN')
 if not TOKEN:
     print("ERROR: TOKEN is missing or empty!")
