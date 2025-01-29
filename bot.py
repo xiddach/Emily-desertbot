@@ -243,6 +243,24 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
 
+# Обробник вибору дії
+def handle_action(update: Update, context: CallbackContext) -> int:
+    action = update.message.text
+    if action == "Ввести дані минулих днів":
+        update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: ДД.ММ.РРРР):')
+        return DATE
+    elif action == "Переглянути дані минулих днів":
+        return view_data(update, context)
+    elif action == "Редагувати список десертів":
+        return edit_desserts_menu(update, context)
+    elif action == "Почати прогнозування":
+        return start_prediction(update, context)
+    elif action == "Назад до головного меню":
+        return start(update, context)
+    else:
+        update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
+        return VIEW_DATA
+
 # Handle actions in the edit desserts menu
 def handle_edit_data(update: Update, context: CallbackContext) -> int:
     action = update.message.text.strip()
