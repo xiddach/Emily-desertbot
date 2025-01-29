@@ -87,7 +87,7 @@ def handle_callback_query(update: Update, context: CallbackContext) -> None:
     elif action == "Переглянути дані минулих днів":
         view_data(update, context)
     elif action == "Редагувати список десертів":
-        edit_desserts_menu(update, context)
+        edit_desserts_menu(update, context, query)
     elif action == "Почати прогнозування":
         start_prediction(update, context)
     elif action == "Назад до головного меню":
@@ -122,17 +122,23 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
     return view_data(update, context)
 
 # Меню редагування списку десертів
-def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
+def edit_desserts_menu(update: Update, context: CallbackContext, query=None) -> int:
     keyboard = [
         ["Додати десерт"],
         ["Видалити десерт"],
         ["Назад до головного меню"]
     ]
     reply_markup = create_inline_keyboard([item for sublist in keyboard for item in sublist])
-    update.message.reply_text(
-        "Оберіть дію для редагування списку десертів:",
-        reply_markup=reply_markup
-    )
+    if query:
+        query.edit_message_text(
+            "Оберіть дію для редагування списку десертів:",
+            reply_markup=reply_markup
+        )
+    else:
+        update.message.reply_text(
+            "Оберіть дію для редагування списку десертів:",
+            reply_markup=reply_markup
+        )
     return EDIT_DATA
 
 # Додавання нового десерту
@@ -242,24 +248,6 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
-
-# Обробник вибору дії
-def handle_action(update: Update, context: CallbackContext) -> int:
-    action = update.message.text
-    if action == "Ввести дані минулих днів":
-        update.message.reply_text('Будь ласка, введіть дату дня, для якого ви хочете ввести залишки (формат: ДД.ММ.РРРР):')
-        return DATE
-    elif action == "Переглянути дані минулих днів":
-        return view_data(update, context)
-    elif action == "Редагувати список десертів":
-        return edit_desserts_menu(update, context)
-    elif action == "Почати прогнозування":
-        return start_prediction(update, context)
-    elif action == "Назад до головного меню":
-        return start(update, context)
-    else:
-        update.message.reply_text("Невідома команда. Будь ласка, виберіть дію з меню.")
-        return VIEW_DATA
 
 # Handle actions in the edit desserts menu
 def handle_edit_data(update: Update, context: CallbackContext) -> int:
