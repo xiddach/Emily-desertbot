@@ -325,12 +325,12 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
         for i in range(0, len(DESSERTS), 2):
             if i + 1 < len(DESSERTS):
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}"),
-                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{i + 1}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}_{selected_index}"),
+                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{i + 1}_{selected_index}")
                 ])
             else:
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}_{selected_index}")
                 ])
         keyboard.append([InlineKeyboardButton("Назад", callback_data=f"back_to_view_{selected_index}")])
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -344,9 +344,13 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
 def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    dessert_index = int(query.data.split('_')[2])
+    parts = query.data.split('_')
+    dessert_index = int(parts[2])
+    date_index = int(parts[3])
     dessert = DESSERTS[dessert_index]
+    selected_date = context.user_data['dates'][date_index]
     context.user_data['edit_dessert'] = dessert
+    context.user_data['edit_date'] = selected_date
     query.edit_message_text(text=f"Введіть нову кількість для {dessert}:")
     return DESSERTS_INPUT
 
