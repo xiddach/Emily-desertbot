@@ -67,6 +67,10 @@ def start(update: Update, context: CallbackContext) -> int:
     reply_markup = create_inline_keyboard([item for sublist in keyboard for item in sublist])
     update.message.reply_text(
         "*Привіт!* Що ви хочете зробити?\n\n"
+        "- Ввести дані минулих днів\n"
+        "- Переглянути дані минулих днів\n"
+        "- Редагувати список десертів\n"
+        "- Почати прогнозування",
         parse_mode=ParseMode.MARKDOWN,
         reply_markup=reply_markup
     )
