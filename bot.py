@@ -1,7 +1,9 @@
 import os
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+from sklearn.preprocessing import MinMaxScaler
 from datetime import datetime, timedelta
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
@@ -12,7 +14,7 @@ DESSERTS = [
     "Макарон груша горгонзола", "Макарон кокос мигдаль", "Макарон лотус", "Макарон гарбузове лате",
     "Еклер фісташковий", "Еклер кокос малина", "Еклер снікерс", "Тарт фісташковий", "Тарт цитрусовий",
     "Подарунок", "Ялинка", "Гречаний медовик", "Купідон", "Три шоколади", "Злиток", "Кавове зерно",
-    "Парі бレスト", "Пʼяна вишня", "Чізкейк", "Зайчик", "Зайчик 18+", "Вупі пай", "Горішок класичний",
+    "Парі брест", "Пʼяна вишня", "Чізкейк", "Зайчик", "Зайчик 18+", "Вупі пай", "Горішок класичний",
     "Горішок кокосовий", "Горішок горгонзола", "Горішок шоколадний", "Печиво Емілі", "Мадлен персиковий",
     "Мадлен ягідний", "Мадлен шоколадний", "Зефір", "Куля какао", "Кіш з куркою і грибами", "Кіш 5 сирів",
     "Кіш з лососем"
@@ -37,16 +39,17 @@ def load_data():
 def save_data(data):
     data.to_csv(DATA_FILE, index=False)
 
-# Прогнозування замовлень за допомогою Random Forest
+# Прогнозування замовлень за допомогою LSTM
 def predict_orders(dessert_name, data):
     """
-    Прогнозування замовлень десертів за допомогою Random Forest.
+    Прогнозування замовлень десертів за допомогою LSTM.
     :param dessert_name: назва десерту
     :param data: DataFrame з історичними даними
     :return: прогнозоване замовлення на наступний день
     """
     # Вибираємо дані лише для конкретного десерту
     dessert_data = data[['date', dessert_name]].dropna()
+    
     if len(dessert_data) < 14:
         available_days = len(dessert_data)
         if available_days < 5:
@@ -55,16 +58,40 @@ def predict_orders(dessert_name, data):
             last_days = dessert_data.tail(available_days)
     else:
         last_days = dessert_data.tail(14)
+    
     last_days['date'] = pd.to_datetime(last_days['date'], format='%d.%m.%Y')
     last_days = last_days.sort_values(by='date')
-    X = np.array(range(len(last_days))).reshape(-1, 1)
-    y = np.array(last_days[dessert_name])
-    # Навчаємо модель Random Forest з меншою кількістю дерев
-    model = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)  # Паралельне обчислення
-    model.fit(X, y)
-    # Прогнозуємо замовлення на наступний день
-    next_day = X[-1][0] + 1
-    predicted_order = model.predict([[next_day]])[0]
+    
+    # Підготовка даних для LSTM
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(last_days[[dessert_name]])
+    
+    # Створення датасету для LSTM
+    def create_dataset(dataset, time_step=1):
+        dataX, dataY = [], []
+        for i in range(len(dataset) - time_step - 1):
+            a = dataset[i:(i + time_step), 0]
+            dataX.append(a)
+            dataY.append(dataset[i + time_step, 0])
+        return np.array(dataX), np.array(dataY)
+    
+    time_step = 7
+    X, y = create_dataset(scaled_data, time_step)
+    X = X.reshape(X.shape[0], X.shape[1], 1)
+    
+    # Створення та навчання моделі LSTM
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], 1)))
+    model.add(LSTM(units=50))
+    model.add(Dense(units=1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(X, y, epochs=100, batch_size=1, verbose=1)
+    
+    # Прогнозування наступного дня
+    inputs = scaled_data[-time_step:].reshape(1, time_step, 1)
+    predicted_scaled = model.predict(inputs)
+    predicted_order = scaler.inverse_transform(predicted_scaled)[0][0]
+    
     return round(predicted_order)
 
 # Обробник команди /start
