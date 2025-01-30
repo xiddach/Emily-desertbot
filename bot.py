@@ -129,7 +129,7 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
         query.edit_message_text(text=response)
     else:
         query.edit_message_text(text=f"Дані за {selected_date} не знайдені.")
-    return view_data(update, context)
+    return VIEW_DATE_SELECTION  # Залишаємося у тому ж стані
 # Меню редагування списку десертів
 def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
     keyboard = [
