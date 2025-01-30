@@ -308,7 +308,11 @@ def edit_data(update: Update, context: CallbackContext) -> int:
 def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    selected_date = query.data.split('_')[2]
+    parts = query.data.split('_')
+    if len(parts) < 3:
+        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
+        return EDIT_DATE_SELECTION
+    selected_date = parts[2]
     context.user_data['edit_date'] = selected_date
     data = load_data()
     row = data[data['date'] == selected_date]
@@ -318,12 +322,12 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
         for i in range(0, len(DESSERTS), 2):
             if i + 1 < len(DESSERTS):
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{DESSERTS[i]}"),
-                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{DESSERTS[i + 1]}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i]}"),
+                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i + 1]}")
                 ])
             else:
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{DESSERTS[i]}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i]}")
                 ])
         keyboard.append([InlineKeyboardButton("Назад", callback_data=f"back_to_view_{selected_date}")])
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -337,7 +341,12 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
 def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    dessert = query.data.split('_')[2]
+    parts = query.data.split('_')
+    if len(parts) < 4:
+        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
+        return EDIT_SPECIFIC_DESSERT
+    selected_date = parts[2]
+    dessert = parts[3]
     context.user_data['edit_dessert'] = dessert
     query.edit_message_text(text=f"Введіть нову кількість для {dessert}:")
     return DESSERTS_INPUT
@@ -346,7 +355,11 @@ def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
 def handle_delete_entry(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    delete_date = query.data.split('_')[1]
+    parts = query.data.split('_')
+    if len(parts) < 2:
+        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
+        return EDIT_DATE_SELECTION
+    delete_date = parts[1]
     data = load_data()
     data = data[data['date'] != delete_date]
     save_data(data)
