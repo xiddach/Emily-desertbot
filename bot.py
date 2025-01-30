@@ -17,10 +17,8 @@ DESSERTS = [
     "Мадлен ягідний", "Мадлен шоколадний", "Зефір", "Куля какао", "Кіш з куркою і грибами", "Кіш 5 сирів",
     "Кіш з лососем"
 ]
-
 # File for storing historical data
 DATA_FILE = 'dessert_data.csv'
-
 # States for ConversationHandler
 DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, VIEW_DATE_SELECTION = range(8)
 
@@ -55,7 +53,6 @@ def predict_orders(dessert_name, data):
             last_days = dessert_data.tail(available_days)
     else:
         last_days = dessert_data.tail(21)
-    
     last_days['date'] = pd.to_datetime(last_days['date'], format='%d.%m.%Y')
     last_days = last_days.sort_values(by='date')
     X = np.array(range(len(last_days))).reshape(-1, 1)
@@ -107,7 +104,6 @@ def view_data(update: Update, context: CallbackContext) -> int:
     if data.empty:
         update.callback_query.edit_message_text(text="Історичні дані відсутні.")
         return VIEW_DATA
-    
     dates = sorted(data['date'].unique(), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
     keyboard = []
     for i in range(0, len(dates), 2):
@@ -271,6 +267,7 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
     next_date = datetime.strptime(date, '%d.%m.%Y').date() + timedelta(days=1)
     # Formulate a message with predictions
     response = f'Прогнозовані замовлення на {next_date.strftime("%d.%m.%Y")}:\n'
+    order_response = f'Кількість десертів для замовлення на {next_date.strftime("%d.%m.%Y")}:\n'
     for dessert, prediction in predictions.items():
         if isinstance(prediction, (int, float)):
             if dessert in desserts:
@@ -278,9 +275,12 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
             else:
                 order_quantity = prediction
             response += f'{dessert}: Прогноз {prediction}, Поточний залишок {desserts.get(dessert, 0)}, Потрібно замовити {order_quantity}\n'
+            order_response += f'{dessert}: {order_quantity}\n'
         else:
             response += f'{dessert}: {prediction}\n'
+            order_response += f'{dessert}: Not enough data for prediction\n'
     update.message.reply_text(response)
+    update.message.reply_text(order_response)
     return ConversationHandler.END
 
 # Handler for the /cancel command
