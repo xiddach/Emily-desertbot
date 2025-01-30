@@ -147,13 +147,6 @@ def edit_desserts_menu(update: Update, context: CallbackContext, query=None) -> 
         )
     return EDIT_DATA
 
-# Додавання нового десерту
-def add_dessert(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text(
-        "Введіть назву нового десерту:"
-    )
-    return ADD_DESSERT
-
 # Обробник додавання нового десерту
 def handle_add_dessert(update: Update, context: CallbackContext) -> int:
     new_dessert = update.message.text.strip()
@@ -164,17 +157,6 @@ def handle_add_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
     return edit_desserts_menu(update, context)
 
-# Видалення десерту
-def remove_dessert(update: Update, context: CallbackContext) -> int:
-    keyboard = [[dessert] for dessert in DESSERTS]
-    keyboard.append(["Назад до головного меню"])
-    reply_markup = create_inline_keyboard([item for sublist in keyboard for item in sublist])
-    update.message.reply_text(
-        "Оберіть десерт для видалення:",
-        reply_markup=reply_markup
-    )
-    return REMOVE_DESSERT
-
 # Обробник видалення десерту
 def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     dessert_to_remove = update.message.text.strip()
@@ -184,6 +166,24 @@ def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     else:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
     return edit_desserts_menu(update, context)
+
+# Обробник додавання нового десерту
+def add_dessert(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text(
+        "Введіть назву нового десерту:"
+    )
+    return ADD_DESSERT
+
+# Обробник видалення десерту
+def remove_dessert(update: Update, context: CallbackContext) -> int:
+    keyboard = [[dessert] for dessert in DESSERTS]
+    keyboard.append(["Назад до головного меню"])
+    reply_markup = create_inline_keyboard([item for sublist in keyboard for item in sublist])
+    update.message.reply_text(
+        "Оберіть десерт для видалення:",
+        reply_markup=reply_markup
+    )
+    return REMOVE_DESSERT
 
 # Початок прогнозування
 def start_prediction(update: Update, context: CallbackContext, query=None) -> int:
@@ -324,5 +324,4 @@ def main():
     updater.idle()
 
 if __name__ == '__main__':
-    main()
     main()
