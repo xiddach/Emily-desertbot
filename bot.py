@@ -113,23 +113,26 @@ def view_data(update: Update, context: CallbackContext) -> int:
     for i in range(0, len(dates), 2):
         if i + 1 < len(dates):
             keyboard.append([
-                InlineKeyboardButton(dates[i], callback_data=f"view_{dates[i]}"),
-                InlineKeyboardButton(dates[i + 1], callback_data=f"view_{dates[i + 1]}")
+                InlineKeyboardButton(dates[i], callback_data=f"view_{i}"),
+                InlineKeyboardButton(dates[i + 1], callback_data=f"view_{i + 1}")
             ])
         else:
             keyboard.append([
-                InlineKeyboardButton(dates[i], callback_data=f"view_{dates[i]}")
+                InlineKeyboardButton(dates[i], callback_data=f"view_{i}")
             ])
     keyboard.append([InlineKeyboardButton("Назад до головного меню", callback_data="back_to_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.edit_message_text(text="Оберіть дату для перегляду:", reply_markup=reply_markup)
+    context.user_data['dates'] = dates
     return VIEW_DATE_SELECTION
 
 # Дата вибору для перегляду даних
 def view_date_selection(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    selected_date = query.data.split('_')[1]
+    selected_index = int(query.data.split('_')[1])
+    dates = context.user_data['dates']
+    selected_date = dates[selected_index]
     data = load_data()
     row = data[data['date'] == selected_date]
     if not row.empty:
@@ -139,8 +142,8 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
                 response += f"  {dessert}: {row[dessert].values[0]}\n"
         response += "\nОберіть дію:"
         keyboard = [
-            [InlineKeyboardButton("Редагувати дані", callback_data=f"edit_specific_{selected_date}")],
-            [InlineKeyboardButton("Видалити запис", callback_data=f"delete_{selected_date}")],
+            [InlineKeyboardButton("Редагувати дані", callback_data=f"edit_{selected_index}")],
+            [InlineKeyboardButton("Видалити запис", callback_data=f"delete_{selected_index}")],
             [InlineKeyboardButton("Назад", callback_data="back_to_view_data")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -182,12 +185,12 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
     for i in range(0, len(DESSERTS), 2):
         if i + 1 < len(DESSERTS):
             keyboard.append([
-                InlineKeyboardButton(DESSERTS[i], callback_data=f"remove_{DESSERTS[i]}"),
-                InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"remove_{DESSERTS[i + 1]}")
+                InlineKeyboardButton(DESSERTS[i], callback_data=f"remove_{i}"),
+                InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"remove_{i + 1}")
             ])
         else:
             keyboard.append([
-                InlineKeyboardButton(DESSERTS[i], callback_data=f"remove_{DESSERTS[i]}")
+                InlineKeyboardButton(DESSERTS[i], callback_data=f"remove_{i}")
             ])
     keyboard.append([InlineKeyboardButton("Назад до головного меню", callback_data="back_to_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -198,7 +201,8 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
 def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    dessert_to_remove = query.data.split('_')[1]
+    dessert_index = int(query.data.split('_')[1])
+    dessert_to_remove = DESSERTS[dessert_index]
     if dessert_to_remove in DESSERTS:
         DESSERTS.remove(dessert_to_remove)
         query.edit_message_text(text=f"Десерт '{dessert_to_remove}' успішно видалено.")
@@ -292,27 +296,26 @@ def edit_data(update: Update, context: CallbackContext) -> int:
     for i in range(0, len(dates), 2):
         if i + 1 < len(dates):
             keyboard.append([
-                InlineKeyboardButton(dates[i], callback_data=f"edit_{dates[i]}"),
-                InlineKeyboardButton(dates[i + 1], callback_data=f"edit_{dates[i + 1]}")
+                InlineKeyboardButton(dates[i], callback_data=f"view_{i}"),
+                InlineKeyboardButton(dates[i + 1], callback_data=f"view_{i + 1}")
             ])
         else:
             keyboard.append([
-                InlineKeyboardButton(dates[i], callback_data=f"edit_{dates[i]}")
+                InlineKeyboardButton(dates[i], callback_data=f"view_{i}")
             ])
     keyboard.append([InlineKeyboardButton("Назад до головного меню", callback_data="back_to_main")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.edit_message_text(text="Оберіть дату для редагування:", reply_markup=reply_markup)
-    return EDIT_DATE_SELECTION
+    context.user_data['dates'] = dates
+    return VIEW_DATE_SELECTION
 
 # Обробник редагування конкретної дати
 def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    parts = query.data.split('_')
-    if len(parts) < 3:
-        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
-        return EDIT_DATE_SELECTION
-    selected_date = parts[2]
+    selected_index = int(query.data.split('_')[1])
+    dates = context.user_data['dates']
+    selected_date = dates[selected_index]
     context.user_data['edit_date'] = selected_date
     data = load_data()
     row = data[data['date'] == selected_date]
@@ -322,14 +325,14 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
         for i in range(0, len(DESSERTS), 2):
             if i + 1 < len(DESSERTS):
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i]}"),
-                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i + 1]}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}"),
+                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{i + 1}")
                 ])
             else:
                 keyboard.append([
-                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{selected_date}_{DESSERTS[i]}")
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{i}")
                 ])
-        keyboard.append([InlineKeyboardButton("Назад", callback_data=f"back_to_view_{selected_date}")])
+        keyboard.append([InlineKeyboardButton("Назад", callback_data=f"back_to_view_{selected_index}")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(text=response, reply_markup=reply_markup)
         return EDIT_SPECIFIC_DESSERT
@@ -341,12 +344,8 @@ def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
 def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    parts = query.data.split('_')
-    if len(parts) < 4:
-        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
-        return EDIT_SPECIFIC_DESSERT
-    selected_date = parts[2]
-    dessert = parts[3]
+    dessert_index = int(query.data.split('_')[2])
+    dessert = DESSERTS[dessert_index]
     context.user_data['edit_dessert'] = dessert
     query.edit_message_text(text=f"Введіть нову кількість для {dessert}:")
     return DESSERTS_INPUT
@@ -355,11 +354,9 @@ def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
 def handle_delete_entry(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    parts = query.data.split('_')
-    if len(parts) < 2:
-        query.edit_message_text(text="Неправильний формат даних. Будь ласка, спробуйте знову.")
-        return EDIT_DATE_SELECTION
-    delete_date = parts[1]
+    selected_index = int(query.data.split('_')[1])
+    dates = context.user_data['dates']
+    delete_date = dates[selected_index]
     data = load_data()
     data = data[data['date'] != delete_date]
     save_data(data)
