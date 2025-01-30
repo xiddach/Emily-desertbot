@@ -155,7 +155,26 @@ def handle_add_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{new_dessert}' вже існує.")
     else:
         DESSERTS.append(new_dessert)
-        update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
+        update.message.reply_text(f"Десерт '{new_dessert}' успішно додано. Підтверджуйте додавання?")
+        keyboard = [
+            [InlineKeyboardButton("Так", callback_data=f"confirm_add_{new_dessert}")],
+            [InlineKeyboardButton("Ні", callback_data="cancel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text("Підтвердіть додавання:", reply_markup=reply_markup)
+    return EDIT_DATA
+
+# Обробник підтвердження додавання десерту
+def handle_add_confirmation(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    query.answer()
+    action = query.data
+    if action.startswith("confirm_add_"):
+        new_dessert = action.replace("confirm_add_", "")
+        DESSERTS.append(new_dessert)
+        query.edit_message_text(f"Десерт '{new_dessert}' успішно додано.")
+    elif action == "cancel":
+        query.edit_message_text("Операція скасована.")
     return edit_desserts_menu(update, context)
 
 # Обробник видалення десерту
@@ -168,14 +187,7 @@ def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
         update.message.reply_text(f"Десерт '{dessert_to_remove}' не знайдено.")
     return edit_desserts_menu(update, context)
 
-# Обробник додавання нового десерту
-def add_dessert(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text(
-        "Введіть назву нового десерту:"
-    )
-    return ADD_DESSERT
-
-# Обробник видалення десерту
+# Обробник видалення десерту через inline-клавіатуру
 def remove_dessert(update: Update, context: CallbackContext) -> int:
     keyboard = [[InlineKeyboardButton(dessert, callback_data=f"remove_{dessert}")] for dessert in DESSERTS]
     keyboard.append([InlineKeyboardButton("Назад до головного меню", callback_data="cancel")])
@@ -328,7 +340,7 @@ def main():
             DATE: [MessageHandler(Filters.text & ~Filters.command, get_date)],
             DESSERTS_INPUT: [MessageHandler(Filters.text & ~Filters.command, handle_dessert_input)],
             PREDICT: [MessageHandler(Filters.text & ~Filters.command, finalize_data)],
-            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data), CallbackQueryHandler(handle_remove_confirmation)],
+            EDIT_DATA: [MessageHandler(Filters.text & ~Filters.command, handle_edit_data), CallbackQueryHandler(handle_add_confirmation), CallbackQueryHandler(handle_remove_confirmation)],
             ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
             REMOVE_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_remove_dessert)],
             VIEW_DATE_SELECTION: [MessageHandler(Filters.text & ~Filters.command, view_date_selection)],
