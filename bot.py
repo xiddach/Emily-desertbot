@@ -1,4 +1,4 @@
-import os
+ import os
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -17,13 +17,10 @@ DESSERTS = [
     "Мадлен ягідний", "Мадлен шоколадний", "Зефір", "Куля какао", "Кіш з куркою і грибами", "Кіш 5 сирів",
     "Кіш з лососем"
 ]
-
 # Файл для зберігання історичних даних
 DATA_FILE = 'dessert_data.csv'
-
 # Стани для ConversationHandler
 DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, VIEW_DATE_SELECTION = range(8)
-
 # Завантаження історичних даних
 def load_data():
     try:
@@ -32,11 +29,9 @@ def load_data():
         # Якщо файл не існує, створюємо новий DataFrame
         data = pd.DataFrame(columns=['date'] + DESSERTS)
     return data
-
 # Збереження даних у файл
 def save_data(data):
     data.to_csv(DATA_FILE, index=False)
-
 # Прогнозування замовлень за допомогою Random Forest
 def predict_orders(dessert_name, data):
     """
@@ -66,7 +61,6 @@ def predict_orders(dessert_name, data):
     next_day = X[-1][0] + 1
     predicted_order = model.predict([[next_day]])[0]
     return round(predicted_order)
-
 # Обробник команди /start
 def start(update: Update, context: CallbackContext) -> int:
     keyboard = [
@@ -81,7 +75,6 @@ def start(update: Update, context: CallbackContext) -> int:
         reply_markup=reply_markup
     )
     return VIEW_DATA
-
 # Обробник вибору дії
 def handle_action(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -99,7 +92,6 @@ def handle_action(update: Update, context: CallbackContext) -> int:
     else:
         query.edit_message_text(text="Невідома команда. Будь ласка, виберіть дію з меню.")
         return VIEW_DATA
-
 # Перегляд даних минулих днів
 def view_data(update: Update, context: CallbackContext) -> int:
     data = load_data()
@@ -122,7 +114,6 @@ def view_data(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.edit_message_text(text="Оберіть дату для перегляду:", reply_markup=reply_markup)
     return VIEW_DATE_SELECTION
-
 # Дата вибору для перегляду даних
 def view_date_selection(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -139,7 +130,6 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
     else:
         query.edit_message_text(text=f"Дані за {selected_date} не знайдені.")
     return VIEW_DATE_SELECTION  # Залишаємося у тому ж стані
-
 # Меню редагування списку десертів
 def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
     keyboard = [
@@ -150,12 +140,10 @@ def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.edit_message_text(text="Оберіть дію для редагування списку десертів:", reply_markup=reply_markup)
     return EDIT_DATA
-
 # Додавання нового десерту
 def add_dessert(update: Update, context: CallbackContext) -> int:
     update.callback_query.edit_message_text(text="Введіть назву нового десерту:")
     return ADD_DESSERT
-
 # Обробник додавання нового десерту
 def handle_add_dessert(update: Update, context: CallbackContext) -> int:
     new_dessert = update.message.text.strip()
@@ -165,7 +153,6 @@ def handle_add_dessert(update: Update, context: CallbackContext) -> int:
         DESSERTS.append(new_dessert)
         update.message.reply_text(f"Десерт '{new_dessert}' успішно додано.")
     return edit_desserts_menu(update, context)
-
 # Видалення десерту
 def remove_dessert(update: Update, context: CallbackContext) -> int:
     keyboard = []
@@ -183,7 +170,6 @@ def remove_dessert(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.callback_query.edit_message_text(text="Оберіть десерт для видалення:", reply_markup=reply_markup)
     return REMOVE_DESSERT
-
 # Обробник видалення десерту
 def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -195,13 +181,11 @@ def handle_remove_dessert(update: Update, context: CallbackContext) -> int:
     else:
         query.edit_message_text(text=f"Десерт '{dessert_to_remove}' не знайдено.")
     return edit_desserts_menu(update, context)
-
 # Початок прогнозування
 def start_prediction(update: Update, context: CallbackContext) -> int:
     update.callback_query.edit_message_text(text="Починаємо прогнозування...")
     # Тут можна додати логіку прогнозування
     return VIEW_DATA
-
 # Обробник дати
 def get_date(update: Update, context: CallbackContext) -> int:
     try:
@@ -213,7 +197,6 @@ def get_date(update: Update, context: CallbackContext) -> int:
     except ValueError:
         update.message.reply_text('Неправильний формат дати. Будь ласка, введіть дату у форматі ДД.ММ.РРРР:')
         return DATE
-
 # Нова функція для парсингу інформації про залишки з одного повідомлення
 def parse_stock_info(message: str) -> dict:
     """
@@ -238,13 +221,11 @@ def parse_stock_info(message: str) -> dict:
         else:
             print(f"Попередження: Некоректний формат рядка: '{line}'")
     return stock_info
-
 # Обробник введення залишків
 def handle_dessert_input(update: Update, context: CallbackContext) -> int:
     stock_info = parse_stock_info(update.message.text)
     context.user_data['desserts'] = stock_info
     return finalize_data(update, context)
-
 # Збереження даних і прогнозування
 def finalize_data(update: Update, context: CallbackContext) -> int:
     date = context.user_data['date']
@@ -258,31 +239,24 @@ def finalize_data(update: Update, context: CallbackContext) -> int:
     save_data(data)
     # Прогнозуємо замовлення
     predictions = {}
-    explanations = {}
     for dessert in DESSERTS:
         try:
             prediction = predict_orders(dessert, data)
             predictions[dessert] = prediction
-            # Коротке пояснення
-            explanations[dessert] = "На основі минулого спросу."
         except ValueError as e:
             predictions[dessert] = str(e)
-            explanations[dessert] = str(e)
     # Розраховуємо дату прогнозу
     next_date = datetime.strptime(date, '%d.%m.%Y').date() + timedelta(days=1)
     # Формуємо повідомлення з прогнозами
     response = f'Прогнозовані замовлення на {next_date.strftime("%d.%m.%Y")}:\n'
     for dessert, prediction in predictions.items():
-        short_name = dessert[:15] + '...' if len(dessert) > 15 else dessert
-        response += f'{short_name}: {prediction} ({explanations[dessert]})\n'
+        response += f'{dessert}: {prediction}\n'
     update.message.reply_text(response)
     return ConversationHandler.END
-
 # Обробник команди /cancel
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
-
 # Handle actions in the edit desserts menu
 def handle_edit_data(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -297,7 +271,6 @@ def handle_edit_data(update: Update, context: CallbackContext) -> int:
     else:
         query.edit_message_text(text="Невідома команда. Будь ласка, виберіть дію з меню.")
         return EDIT_DATA
-
 # Головна функція
 def main():
     TOKEN = os.environ.get('TOKEN')
