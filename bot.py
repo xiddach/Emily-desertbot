@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
 
 # Список назв десертів
@@ -12,7 +12,7 @@ DESSERTS = [
     "Макарон груша горгонзола", "Макарон кокос мигдаль", "Макарон лотус", "Макарон гарбузове лате",
     "Еклер фісташковий", "Еклер кокос малина", "Еклер снікерс", "Тарт фісташковий", "Тарт цитрусовий",
     "Подарунок", "Ялинка", "Гречаний медовик", "Купідон", "Три шоколади", "Злиток", "Кавове зерно",
-    "Парі бレスト", "Пʼяна вишня", "Чізкейк", "Зайчик", "Зайчик 18+", "Вупі пай", "Горішок класичний",
+    "Парі брест", "Пʼяна вишня", "Чізкейк", "Зайчик", "Зайчик 18+", "Вупі пай", "Горішок класичний",
     "Горішок кокосовий", "Горішок горгонзола", "Горішок шоколадний", "Печиво Емілі", "Мадлен персиковий",
     "Мадлен ягідний", "Мадлен шоколадний", "Зефір", "Куля какао", "Кіш з куркою і грибами", "Кіш 5 сирів",
     "Кіш з лососем"
@@ -22,7 +22,7 @@ DESSERTS = [
 DATA_FILE = 'dessert_data.csv'
 
 # Стани для ConversationHandler
-DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, VIEW_DATE_SELECTION = range(8)
+DATE, DESSERTS_INPUT, PREDICT, VIEW_DATA, EDIT_DATA, ADD_DESSERT, REMOVE_DESSERT, VIEW_DATE_SELECTION, EDIT_DATE_SELECTION, EDIT_SPECIFIC_DESSERT, DELETE_ENTRY = range(11)
 
 # Завантаження історичних даних
 def load_data():
@@ -96,6 +96,8 @@ def handle_action(update: Update, context: CallbackContext) -> int:
         return edit_desserts_menu(update, context)
     elif action == "start_prediction":
         return start_prediction(update, context)
+    elif action == "edit_data":
+        return edit_data(update, context)
     else:
         query.edit_message_text(text="Невідома команда. Будь ласка, виберіть дію з меню.")
         return VIEW_DATA
@@ -135,10 +137,18 @@ def view_date_selection(update: Update, context: CallbackContext) -> int:
         for dessert in DESSERTS:
             if dessert in row and not pd.isna(row[dessert].values[0]):
                 response += f"  {dessert}: {row[dessert].values[0]}\n"
-        query.edit_message_text(text=response)
+        response += "\nОберіть дію:"
+        keyboard = [
+            [InlineKeyboardButton("Редагувати дані", callback_data=f"edit_specific_{selected_date}")],
+            [InlineKeyboardButton("Видалити запис", callback_data=f"delete_{selected_date}")],
+            [InlineKeyboardButton("Назад", callback_data="back_to_view_data")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_text(text=response, reply_markup=reply_markup)
+        return EDIT_DATE_SELECTION
     else:
         query.edit_message_text(text=f"Дані за {selected_date} не знайдені.")
-    return view_data(update, context)
+        return view_data(update, context)
 
 # Меню редагування списку десертів
 def edit_desserts_menu(update: Update, context: CallbackContext) -> int:
@@ -271,6 +281,78 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Операція скасована.')
     return ConversationHandler.END
 
+# Меню редагування даних за минулі дні
+def edit_data(update: Update, context: CallbackContext) -> int:
+    data = load_data()
+    if data.empty:
+        update.callback_query.edit_message_text(text="Історичні дані відсутні.")
+        return VIEW_DATA
+    dates = sorted(data['date'].unique(), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
+    keyboard = []
+    for i in range(0, len(dates), 2):
+        if i + 1 < len(dates):
+            keyboard.append([
+                InlineKeyboardButton(dates[i], callback_data=f"edit_{dates[i]}"),
+                InlineKeyboardButton(dates[i + 1], callback_data=f"edit_{dates[i + 1]}")
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton(dates[i], callback_data=f"edit_{dates[i]}")
+            ])
+    keyboard.append([InlineKeyboardButton("Назад до головного меню", callback_data="back_to_main")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.callback_query.edit_message_text(text="Оберіть дату для редагування:", reply_markup=reply_markup)
+    return EDIT_DATE_SELECTION
+
+# Обробник редагування конкретної дати
+def edit_specific_dessert(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    query.answer()
+    selected_date = query.data.split('_')[2]
+    context.user_data['edit_date'] = selected_date
+    data = load_data()
+    row = data[data['date'] == selected_date]
+    if not row.empty:
+        response = f"Оберіть десерт для редагування за {selected_date}:\n"
+        keyboard = []
+        for i in range(0, len(DESSERTS), 2):
+            if i + 1 < len(DESSERTS):
+                keyboard.append([
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{DESSERTS[i]}"),
+                    InlineKeyboardButton(DESSERTS[i + 1], callback_data=f"edit_dessert_{DESSERTS[i + 1]}")
+                ])
+            else:
+                keyboard.append([
+                    InlineKeyboardButton(DESSERTS[i], callback_data=f"edit_dessert_{DESSERTS[i]}")
+                ])
+        keyboard.append([InlineKeyboardButton("Назад", callback_data=f"back_to_view_{selected_date}")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_text(text=response, reply_markup=reply_markup)
+        return EDIT_SPECIFIC_DESSERT
+    else:
+        query.edit_message_text(text=f"Дані за {selected_date} не знайдені.")
+        return edit_data(update, context)
+
+# Обробник редагування конкретного десерту
+def handle_edit_dessert(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    query.answer()
+    dessert = query.data.split('_')[2]
+    context.user_data['edit_dessert'] = dessert
+    query.edit_message_text(text=f"Введіть нову кількість для {dessert}:")
+    return DESSERTS_INPUT
+
+# Обробник видалення конкретної дати
+def handle_delete_entry(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    query.answer()
+    delete_date = query.data.split('_')[1]
+    data = load_data()
+    data = data[data['date'] != delete_date]
+    save_data(data)
+    query.edit_message_text(text=f"Запис за {delete_date} видалений.")
+    return edit_data(update, context)
+
 # Handle actions in the edit desserts menu
 def handle_edit_data(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -306,6 +388,8 @@ def main():
             ADD_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_add_dessert)],
             REMOVE_DESSERT: [CallbackQueryHandler(handle_remove_dessert)],
             VIEW_DATE_SELECTION: [CallbackQueryHandler(view_date_selection)],
+            EDIT_DATE_SELECTION: [CallbackQueryHandler(edit_specific_dessert), CallbackQueryHandler(handle_delete_entry)],
+            EDIT_SPECIFIC_DESSERT: [MessageHandler(Filters.text & ~Filters.command, handle_edit_dessert)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
