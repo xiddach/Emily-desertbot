@@ -1,10 +1,9 @@
 import sqlite3
 import random
 from datetime import datetime, timedelta
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils import executor
-from aiogram.filters import Command  # Это стоит использовать только в старых версиях aiogram
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
@@ -182,6 +181,9 @@ async def go_back(call: types.CallbackQuery):
             reply_markup=menu_keyboard
         )
 
-# Запуск бота
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+# Запуск бота с использованием asyncio
+async def main():
+    await dp.start_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
