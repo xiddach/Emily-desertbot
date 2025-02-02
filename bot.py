@@ -3,13 +3,13 @@ import random
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import Command
 from aiogram.utils import executor
+from aiogram.filters import Command  # Это стоит использовать только в старых версиях aiogram
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-TOKEN = "7631205077:AAFt7ryCShzyBA43ou-7IldEWGsAO0TyB9E"  # Твой токен
-ADMIN_CHAT_IDS = ["@Sofismm", "@xiddach"]  # Список ID администраторов
+TOKEN = "YOUR_BOT_TOKEN"  # Твой токен
+ADMIN_CHAT_IDS = ["ADMIN_CHAT_ID1", "ADMIN_CHAT_ID2"]  # Список ID администраторов
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -129,7 +129,7 @@ def predict_order_with_explanation():
     return predictions, explanations
 
 # Обработчик команды /start с приветствием
-@dp.message(Command("start"))
+@dp.message(commands=["start"])
 async def start(message: types.Message):
     await message.answer(
         "Привет! 👋 Добро пожаловать в наш кондитерский бот! 🍰 "
@@ -153,7 +153,7 @@ async def choose_dessert(message: types.Message):
     await message.answer(f"Сколько порций {dessert} вам нужно? Выберите количество:", reply_markup=quantity_keyboard)
 
 # Обработчик команды статистики
-@dp.message(Command("sales_stats"))
+@dp.message(commands=["sales_stats"])
 async def sales_stats_command(message: types.Message):
     if str(message.chat.id) in ADMIN_CHAT_IDS:
         await send_sales_stats(message)
