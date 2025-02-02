@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-TOKEN = "YOUR_BOT_TOKEN"  # Твой токен
+TOKEN = "7631205077:AAFt7ryCShzyBA43ou-7IldEWGsAO0TyB9E"  # Твой токен
 ADMIN_CHAT_IDS = ["ADMIN_CHAT_ID1", "ADMIN_CHAT_ID2"]  # Список ID администраторов
 
 bot = Bot(token=TOKEN)
